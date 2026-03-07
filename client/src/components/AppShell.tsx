@@ -9,6 +9,8 @@ import {
 import { toast } from "sonner";
 import CommandPalette from "./CommandPalette";
 import LiquidSvgFilters from "./LiquidSvgFilters";
+import { useWorkspaceContext } from "@/contexts/WorkspaceContext";
+import { checkHealth } from "@/api/chat";
 
 const NAV_ITEMS = [
   { id: "workspaces", label: "Workspaces", icon: LayoutGrid,    path: "/" },
@@ -20,9 +22,6 @@ const NAV_ITEMS = [
   { id: "settings",   label: "Settings",   icon: Settings,      path: "/settings" },
 ];
 
-const MODELS = ["GPT-4o", "Claude 3.5", "Gemini 2.0", "Llama 3.3", "Mistral"];
-const WORKSPACES = ["Personal", "Work - Dev", "Research", "Side Project"];
-
 const LOGO_GOLD = "https://d2xsxph8kpxj0f.cloudfront.net/310519663184143728/AQqvN7EgRC28gUL6shAne5/logo-gold-cropped_edd71fae.png";
 const LOGO_SILVER = "https://d2xsxph8kpxj0f.cloudfront.net/310519663184143728/AQqvN7EgRC28gUL6shAne5/logo-silver-cropped_83e7ad95.png";
 
@@ -32,8 +31,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [connected, setConnected] = useState(true);
   const [cmdOpen, setCmdOpen] = useState(false);
-  const [selectedModel, setSelectedModel] = useState("GPT-4o");
-  const [selectedWorkspace, setSelectedWorkspace] = useState("Personal");
+  const { workspaces: ctxWorkspaces, activeWorkspace, activeWorkspaceId, setActiveWorkspaceId, models, defaultModel } = useWorkspaceContext();
+  const [selectedModel, setSelectedModel] = useState("qwen3.5:9b");
   const [lang, setLang] = useState<"EN" | "HE">("EN");
   const [modelDropOpen, setModelDropOpen] = useState(false);
   const [wsDropOpen, setWsDropOpen] = useState(false);
@@ -49,6 +48,18 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, []);
+
+  useEffect(() => {
+    const check = () => checkHealth().then(setConnected);
+    check();
+    const interval = setInterval(check, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (activeWorkspace?.default_chat_model) setSelectedModel(activeWorkspace.default_chat_model);
+    else if (defaultModel) setSelectedModel(defaultModel);
+  }, [activeWorkspace, defaultModel]);
 
   const isActive = (path: string) =>
     path === "/" ? location === "/" : location.startsWith(path);
@@ -179,26 +190,32 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 style={{ fontWeight: 450 }}
               >
                 <LayoutGrid size={12} style={{ color: "var(--metal)", opacity: 0.8 }} />
-                <span style={{ color: "var(--foreground)" }}>{selectedWorkspace}</span>
+                <span style={{ color: "var(--foreground)" }}>{activeWorkspace?.name || "No workspace"}</span>
                 <ChevronDown size={10} style={{ color: "var(--muted-foreground)" }} />
               </button>
               {wsDropOpen && (
+                <>
+                <div className="fixed inset-0 z-40" onClick={() => setWsDropOpen(false)} />
                 <div className="absolute top-full mt-1.5 left-0 w-48 lg-panel rounded-xl py-1.5 z-50" style={{ animation: "fade-up 0.15s ease" }}>
-                  {WORKSPACES.map(ws => (
+                  {ctxWorkspaces.map(ws => (
                     <button
-                      key={ws}
-                      onClick={() => { setSelectedWorkspace(ws); setWsDropOpen(false); }}
+                      key={ws.id}
+                      onClick={() => { setActiveWorkspaceId(ws.id); setWsDropOpen(false); }}
                       className="w-full text-left px-3 py-1.5 text-sm transition-colors rounded-lg"
                       style={{
-                        color: ws === selectedWorkspace ? "var(--metal)" : "var(--foreground)",
-                        background: ws === selectedWorkspace ? "var(--metal-dim)" : "transparent",
+                        color: ws.id === activeWorkspaceId ? "var(--metal)" : "var(--foreground)",
+                        background: ws.id === activeWorkspaceId ? "var(--metal-dim)" : "transparent",
                         margin: "0 4px", width: "calc(100% - 8px)"
                       }}
                     >
-                      {ws}
+                      {ws.name}
                     </button>
                   ))}
+                  {ctxWorkspaces.length === 0 && (
+                    <span className="block px-3 py-1.5 text-xs" style={{ color: "var(--muted-foreground)" }}>No workspaces</span>
+                  )}
                 </div>
+                </>
               )}
             </div>
 
@@ -215,22 +232,28 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 <ChevronDown size={9} style={{ color: "var(--muted-foreground)" }} />
               </button>
               {modelDropOpen && (
+                <>
+                <div className="fixed inset-0 z-40" onClick={() => setModelDropOpen(false)} />
                 <div className="absolute top-full mt-1.5 right-0 w-44 lg-panel rounded-xl py-1.5 z-50" style={{ animation: "fade-up 0.15s ease" }}>
-                  {MODELS.map(m => (
+                  {models.map(m => (
                     <button
-                      key={m}
-                      onClick={() => { setSelectedModel(m); setModelDropOpen(false); }}
+                      key={m.id}
+                      onClick={() => { setSelectedModel(m.id); setModelDropOpen(false); }}
                       className="w-full text-left px-3 py-1.5 text-sm transition-colors rounded-lg"
                       style={{
-                        color: m === selectedModel ? "var(--metal)" : "var(--foreground)",
-                        background: m === selectedModel ? "var(--metal-dim)" : "transparent",
+                        color: m.id === selectedModel ? "var(--metal)" : "var(--foreground)",
+                        background: m.id === selectedModel ? "var(--metal-dim)" : "transparent",
                         margin: "0 4px", width: "calc(100% - 8px)"
                       }}
                     >
-                      {m}
+                      {m.id}
                     </button>
                   ))}
+                  {models.length === 0 && (
+                    <span className="block px-3 py-1.5 text-xs" style={{ color: "var(--muted-foreground)" }}>Loading models...</span>
+                  )}
                 </div>
+                </>
               )}
             </div>
 
@@ -244,8 +267,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             </button>
 
             {/* Connection status */}
-            <button
-              onClick={() => { setConnected(!connected); toast(connected ? "Disconnected" : "Connected"); }}
+            <div
               className="chip"
               style={{
                 background: connected ? "rgba(34,197,94,0.08)" : "rgba(239,68,68,0.08)",
@@ -255,7 +277,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             >
               {connected ? <Wifi size={9} /> : <WifiOff size={9} />}
               {connected ? "Connected" : "Offline"}
-            </button>
+            </div>
 
             {/* Command palette */}
             <button

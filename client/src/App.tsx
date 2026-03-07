@@ -4,6 +4,7 @@ import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { WorkspaceProvider } from "./contexts/WorkspaceContext";
 import AppShell from "./components/AppShell";
 import WorkspacePage from "./pages/WorkspacePage";
 import ChatPage from "./pages/ChatPage";
@@ -37,10 +38,12 @@ function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="dark" switchable>
+        <WorkspaceProvider>
         <TooltipProvider>
           <Toaster position="bottom-right" richColors />
           <Router />
         </TooltipProvider>
+        </WorkspaceProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );
