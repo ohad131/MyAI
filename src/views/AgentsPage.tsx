@@ -3,9 +3,8 @@
 import React, { useState } from "react";
 import { useTheme } from "@/contexts/ThemeContext";
 import {
-  Plus, Play, RotateCcw, ChevronRight, Clock, CheckCircle2,
-  XCircle, Loader2, Bot, Zap, Globe, Code2, Brain, FileText,
-  ChevronDown, X, AlertCircle, Terminal
+  Plus, RotateCcw, ChevronRight, Clock, CheckCircle2,
+  XCircle, Loader2, Bot, Globe, Code2, Brain, FileText, X
 } from "lucide-react";
 import { toast } from "sonner";
 import LiquidButton from "@/components/LiquidButton";

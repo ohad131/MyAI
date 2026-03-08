@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 type noop = (...args: any[]) => any;
 
@@ -9,14 +9,14 @@ type noop = (...args: any[]) => any;
  */
 export function usePersistFn<T extends noop>(fn: T) {
   const fnRef = useRef<T>(fn);
-  fnRef.current = fn;
 
-  const persistFn = useRef<T>(null);
-  if (!persistFn.current) {
-    persistFn.current = function (this: unknown, ...args) {
-      return fnRef.current!.apply(this, args);
-    } as T;
-  }
+  useEffect(() => {
+    fnRef.current = fn;
+  }, [fn]);
 
-  return persistFn.current!;
+  const persistFn = useCallback((...args: Parameters<T>) => {
+    return fnRef.current(...args);
+  }, []);
+
+  return persistFn as T;
 }

@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { useTheme } from "@/contexts/ThemeContext";
 import {
   Wand2, Download, Copy, Shuffle, Filter, Grid3X3,
-  LayoutList, X, ChevronDown, Loader2, Star, Trash2, Share2
+  LayoutList, X, Loader2, Star
 } from "lucide-react";
 import { toast } from "sonner";
 import LiquidButton from "@/components/LiquidButton";

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import type { Route } from "next";
 import { useTheme } from "@/contexts/ThemeContext";
 import {
   LayoutGrid, MessageSquare, Code2, Image, Bot, Brain, Settings,
@@ -23,7 +24,12 @@ const NAV_ITEMS = [
   { id: "agents",     label: "Agents",     icon: Bot,           path: "/agents" },
   { id: "memory",     label: "Memory",     icon: Brain,         path: "/memory" },
   { id: "settings",   label: "Settings",   icon: Settings,      path: "/settings" },
-];
+] as const satisfies ReadonlyArray<{
+  id: string;
+  label: string;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  path: Route;
+}>;
 
 const LOGO_GOLD = "https://d2xsxph8kpxj0f.cloudfront.net/310519663184143728/AQqvN7EgRC28gUL6shAne5/logo-gold-cropped_edd71fae.png";
 const LOGO_SILVER = "https://d2xsxph8kpxj0f.cloudfront.net/310519663184143728/AQqvN7EgRC28gUL6shAne5/logo-silver-cropped_83e7ad95.png";

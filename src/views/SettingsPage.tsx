@@ -3,8 +3,7 @@
 import React, { useState } from "react";
 import { useTheme } from "@/contexts/ThemeContext";
 import {
-  Palette, Server, Cpu, Activity, Download, Globe, Lock,
-  Bell, User, Sun, Moon, Wifi, Check, Zap, Key, Brain, Database
+  Palette, Server, Cpu, Activity, Download, Lock, Bell, Check, Zap, Key
 } from "lucide-react";
 import { toast } from "sonner";
 import LiquidButton from "@/components/LiquidButton";
@@ -42,10 +41,10 @@ export default function SettingsPage() {
       {/* Content */}
       <div className="flex-1 overflow-y-auto px-8 py-6">
         <div className="max-w-xl">
-          {activeSection === "appearance" && <AppearanceSection isDark={isDark} theme={theme} setTheme={setTheme} />}
-          {activeSection === "models" && <ModelsSection isDark={isDark} />}
-          {activeSection === "connectors" && <ConnectorsSection isDark={isDark} />}
-          {activeSection === "diagnostics" && <DiagnosticsSection isDark={isDark} />}
+          {activeSection === "appearance" && <AppearanceSection theme={theme} setTheme={setTheme} />}
+          {activeSection === "models" && <ModelsSection />}
+          {activeSection === "connectors" && <ConnectorsSection />}
+          {activeSection === "diagnostics" && <DiagnosticsSection />}
           {(activeSection === "privacy" || activeSection === "notifications") && (
             <div className="lg-panel rounded-2xl p-8 text-center">
               <div className="w-12 h-12 rounded-2xl mx-auto mb-3 flex items-center justify-center"
@@ -62,7 +61,7 @@ export default function SettingsPage() {
   );
 }
 
-function AppearanceSection({ isDark, theme, setTheme }: any) {
+function AppearanceSection({ theme, setTheme }: any) {
   return (
     <div className="space-y-6">
       <div>
@@ -112,7 +111,7 @@ function AppearanceSection({ isDark, theme, setTheme }: any) {
   );
 }
 
-function ModelsSection({ isDark }: any) {
+function ModelsSection() {
   const models = [
     { name: "GPT-4o", provider: "OpenAI", status: "connected", latency: "320ms" },
     { name: "Claude 3.5 Sonnet", provider: "Anthropic", status: "connected", latency: "280ms" },
@@ -137,7 +136,7 @@ function ModelsSection({ isDark }: any) {
   );
 }
 
-function ConnectorsSection({ isDark }: any) {
+function ConnectorsSection() {
   const [urls, setUrls] = useState({ ollama: "http://localhost:11434", n8n: "http://localhost:5678", comfy: "http://localhost:8188" });
   const connectors = [
     { key: "ollama", name: "Ollama", desc: "Local LLM server", connected: false },
@@ -167,7 +166,7 @@ function ConnectorsSection({ isDark }: any) {
   );
 }
 
-function DiagnosticsSection({ isDark }: any) {
+function DiagnosticsSection() {
   const stats = [
     { label: "GPU", value: "RTX 4070", usage: 34, color: "#3b82f6" },
     { label: "VRAM", value: "4.2 / 12 GB", usage: 35, color: "var(--metal)" },

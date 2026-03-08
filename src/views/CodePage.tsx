@@ -4,8 +4,8 @@ import React, { useState } from "react";
 import { useTheme } from "@/contexts/ThemeContext";
 import {
   Folder, FolderOpen, File, ChevronRight, ChevronDown,
-  Play, RotateCcw, Copy, Wand2, TestTube, GitCompare,
-  Terminal, MessageSquare, X, Maximize2, Plus, Search, Send
+  Play, RotateCcw, Wand2, TestTube, GitCompare,
+  Terminal, MessageSquare, X, Plus, Search, Send
 } from "lucide-react";
 import { toast } from "sonner";
 import LiquidButton from "@/components/LiquidButton";

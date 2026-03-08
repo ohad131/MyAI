@@ -4,8 +4,7 @@ import React, { useState } from "react";
 import { useTheme } from "@/contexts/ThemeContext";
 import {
   Search, Filter, Pin, CheckCircle2, XCircle, Edit3,
-  Trash2, AlertTriangle, Brain, Clock, Tag, ChevronDown,
-  Plus, Star, BarChart3
+  Trash2, AlertTriangle, Brain, Clock, Tag, ChevronDown, Plus
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -35,7 +34,7 @@ export default function MemoryPage() {
      item.tags.some(t => t.includes(search.toLowerCase())))
   );
 
-  const approve = (id: string) => { toast.success("Memory approved"); };
+  const approve = () => { toast.success("Memory approved"); };
   const reject = (id: string) => { setItems(prev => prev.filter(i => i.id !== id)); toast("Memory removed"); };
   const pin = (id: string) => {
     setItems(prev => prev.map(i => i.id === id ? { ...i, pinned: !i.pinned, tab: i.pinned ? "auto" : "pinned" } : i));
@@ -155,7 +154,7 @@ export default function MemoryPage() {
 
               {/* Actions */}
               <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all shrink-0">
-                <button onClick={() => approve(item.id)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-accent transition-all" style={{ color: "#22c55e" }} title="Approve">
+                <button onClick={approve} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-accent transition-all" style={{ color: "#22c55e" }} title="Approve">
                   <CheckCircle2 size={13} />
                 </button>
                 <button onClick={() => pin(item.id)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-accent transition-all" style={{ color: item.pinned ? "var(--metal)" : "var(--muted-foreground)" }} title="Pin">

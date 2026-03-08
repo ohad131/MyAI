@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
+import type { Route } from "next";
 import { useWorkspaceContext } from "@/contexts/WorkspaceContext";
 import { useRouter } from "next/navigation";
 import {
@@ -51,7 +52,11 @@ const QUICK_ACTIONS = [
   { icon: Code2, label: "Code Review", path: "/code" },
   { icon: Image, label: "Generate Image", path: "/images" },
   { icon: Bot, label: "Run Agent", path: "/agents" },
-];
+] as const satisfies ReadonlyArray<{
+  icon: React.ComponentType<{ size?: number; style?: React.CSSProperties; className?: string }>;
+  label: string;
+  path: Route;
+}>;
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();

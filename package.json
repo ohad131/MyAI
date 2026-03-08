@@ -8,6 +8,11 @@
     "build": "next build",
     "start": "next start -H 0.0.0.0 -p 3000",
     "check": "tsc --noEmit",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "analyze": "cross-env ANALYZE=true next build",
     "format": "prettier --write ."
   },
   "dependencies": {
@@ -62,15 +67,18 @@
     "zod": "^4.1.12"
   },
   "devDependencies": {
+    "@next/bundle-analyzer": "^16.1.6",
     "@tailwindcss/postcss": "^4.2.1",
     "@tailwindcss/typography": "^0.5.15",
     "@types/google.maps": "^3.58.1",
     "@types/node": "^24.7.0",
     "@types/react": "^19.2.1",
     "@types/react-dom": "^19.2.1",
-    "add": "^2.0.6",
     "autoprefixer": "^10.4.20",
     "baseline-browser-mapping": "^2.10.0",
+    "cross-env": "^10.1.0",
+    "eslint": "^9.19.0",
+    "eslint-config-next": "^16.1.6",
     "pnpm": "^10.15.1",
     "postcss": "^8.4.47",
     "prettier": "^3.6.2",
@@ -81,6 +89,10 @@
     "vitest": "^2.1.4"
   },
   "packageManager": "pnpm@10.4.1+sha512.c753b6c3ad7afa13af388fa6d808035a008e30ea9993f58c6663e2bc5ff21679aa834db094987129aa4d488b86df57f7b634981b2f827cdcacc698cc0cfb88af",
+  "engines": {
+    "node": ">=20.11.0",
+    "pnpm": ">=10"
+  },
   "pnpm": {
     "overrides": {
       "tailwindcss>nanoid": "3.3.7"

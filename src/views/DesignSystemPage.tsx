@@ -2,8 +2,7 @@
 
 import React, { useState } from "react";
 import { useTheme } from "@/contexts/ThemeContext";
-import { Zap, Check, AlertCircle, Clock, Wifi, Copy, Star, Bell, Search, Send, Sparkles, Loader2 } from "lucide-react";
-import { toast } from "sonner";
+import { Zap, Check, AlertCircle, Clock, Wifi, Star, Bell, Search, Send, Sparkles, Loader2 } from "lucide-react";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -24,7 +23,6 @@ export default function DesignSystemPage() {
   
   const [inputVal, setInputVal] = useState("");
   const [toggle, setToggle] = useState(false);
-  const [slider, setSlider] = useState(65);
 
   return (
     <div className="h-full overflow-y-auto px-8 py-6">

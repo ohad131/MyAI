@@ -2,10 +2,11 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import type { Route } from "next";
 import { useTheme } from "@/contexts/ThemeContext";
 import {
   Search, LayoutGrid, MessageSquare, Code2, Image, Bot, Brain,
-  Settings, Palette, Plus, Moon, Sun, Wifi, Command, ArrowRight
+  Settings, Palette, Plus, Moon, Sun, Command, ArrowRight
 } from "lucide-react";
 
 const COMMANDS = [
@@ -19,7 +20,13 @@ const COMMANDS = [
   { id: "ds",      label: "Design System",        icon: Palette,       path: "/design-system",shortcut: "" },
   { id: "new-chat",label: "New Chat",             icon: Plus,          path: "/chat",         shortcut: "N C" },
   { id: "new-ws",  label: "New Workspace",        icon: Plus,          path: "/",             shortcut: "N W" },
-];
+] as const satisfies ReadonlyArray<{
+  id: string;
+  label: string;
+  icon: React.ComponentType<{ size?: number; style?: React.CSSProperties; className?: string }>;
+  path: Route;
+  shortcut: string;
+}>;
 
 interface Props {
   onClose: () => void;
