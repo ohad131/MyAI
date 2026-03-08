@@ -6,6 +6,7 @@ const ROUTES = [
   "/chat",
   "/code",
   "/images",
+  "/gems",
   "/agents",
   "/memory",
   "/settings",

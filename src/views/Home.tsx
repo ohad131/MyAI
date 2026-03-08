@@ -22,7 +22,7 @@ export default function Home() {
           Workspace Hub
         </h1>
         <p className="text-sm mb-5" style={{ color: "var(--muted-foreground)" }}>
-          Use the sidebar to navigate between Chat, Code, Images, Agents, and Settings.
+          Use the sidebar to navigate between Chat, Gems, Code, Images, Agents, and Settings.
         </p>
         <Button onClick={() => router.push("/")} className="lg-btn-accent px-5 py-2.5 rounded-xl text-sm">
           Open Workspaces

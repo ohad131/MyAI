@@ -18,6 +18,7 @@ interface WorkspaceContextType {
   workspaces: Workspace[];
   workspacesLoading: boolean;
   workspacesError: string | null;
+  workspaceBootstrapReady: boolean;
   activeWorkspaceId: string | null;
   activeWorkspace: Workspace | null;
   setActiveWorkspaceId: (id: string | null) => void;
@@ -38,14 +39,9 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [workspacesLoading, setWorkspacesLoading] = useState(true);
   const [workspacesError, setWorkspacesError] = useState<string | null>(null);
   const [workspacesReady, setWorkspacesReady] = useState(false);
+  const [workspaceBootstrapReady, setWorkspaceBootstrapReady] = useState(false);
   const [activeWorkspaceId, setActiveWorkspaceIdRaw] = useState<string | null>(
-    () => {
-      try {
-        return localStorage.getItem(ACTIVE_WS_KEY);
-      } catch {
-        return null;
-      }
-    },
+    null,
   );
 
   const [models, setModels] = useState<ModelEntry[]>([]);
@@ -90,6 +86,17 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    try {
+      const persistedId = localStorage.getItem(ACTIVE_WS_KEY);
+      setActiveWorkspaceIdRaw(persistedId);
+    } catch {
+      setActiveWorkspaceIdRaw(null);
+    } finally {
+      setWorkspaceBootstrapReady(true);
+    }
+  }, []);
+
+  useEffect(() => {
     refreshWorkspaces();
   }, [refreshWorkspaces]);
   useEffect(() => {
@@ -111,6 +118,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         workspaces,
         workspacesLoading,
         workspacesError,
+        workspaceBootstrapReady,
         activeWorkspaceId,
         activeWorkspace,
         setActiveWorkspaceId,

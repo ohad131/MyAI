@@ -44,7 +44,7 @@ class ChatService:
         workspace = self.workspace_service.get_workspace_or_404(db, payload.workspace_id)
 
         model = payload.selected_model or conversation.model or settings.default_model
-        think = payload.think if payload.think is not None else (conversation.think_enabled or False)
+        think = bool(payload.think) if payload.think is not None else bool(conversation.think_enabled)
 
         gem_id = payload.selected_gem_id or conversation.gem_id or workspace.default_gem_id
         gem = self.gem_repo.get(db, gem_id) if gem_id else None
@@ -80,6 +80,12 @@ class ChatService:
 
         provider = self.registry.default()
         try:
+            logger.info(
+                "dispatching chat conversation_id=%s model=%s think=%s",
+                conversation.id,
+                model,
+                think,
+            )
             result = await provider.chat(model=model, messages=prompt_messages, think=think)
             assistant_text = result.get("content", "")
 

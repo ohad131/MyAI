@@ -1,8 +1,11 @@
 from typing import Any
 
 import httpx
+import logging
 
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 class OllamaProvider:
@@ -27,6 +30,7 @@ class OllamaProvider:
             "stream": False,
         }
         body["think"] = think
+        logger.info("ollama request model=%s think=%s", model, think)
 
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             response = await client.post(f"{self.base_url}/api/chat", json=body)

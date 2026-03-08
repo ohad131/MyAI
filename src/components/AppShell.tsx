@@ -8,7 +8,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 import {
   LayoutGrid, MessageSquare, Code2, Image, Bot, Brain, Settings,
   Sun, Moon, Wifi, WifiOff, Command, ChevronLeft, ChevronRight,
-  Palette, Bell, ChevronDown
+  Palette, Bell, ChevronDown, Sparkles
 } from "lucide-react";
 import { toast } from "sonner";
 import CommandPalette from "./CommandPalette";
@@ -21,6 +21,7 @@ const NAV_ITEMS = [
   { id: "chat",       label: "Chat",       icon: MessageSquare, path: "/chat" },
   { id: "code",       label: "Code",       icon: Code2,         path: "/code" },
   { id: "images",     label: "Images",     icon: Image,         path: "/images" },
+  { id: "gems",       label: "Gems",       icon: Sparkles,      path: "/gems" },
   { id: "agents",     label: "Agents",     icon: Bot,           path: "/agents" },
   { id: "memory",     label: "Memory",     icon: Brain,         path: "/memory" },
   { id: "settings",   label: "Settings",   icon: Settings,      path: "/settings" },
