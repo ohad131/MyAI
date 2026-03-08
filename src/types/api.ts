@@ -68,12 +68,25 @@ export interface ModelsResponse {
 export interface Gem {
   id: string;
   name: string;
-  description: string;
-  system_prompt?: string;
+  system_prompt: string;
+  description?: string;
+  style_rules_json?: Record<string, unknown> | Array<unknown> | null;
+  think_default?: boolean;
+  allowed_models_json?: string[] | null;
+  is_global?: boolean;
   workspace_id: string | null;
   created_at: string;
   updated_at: string;
 }
+
+export interface GemCreatePayload {
+  name: string;
+  system_prompt: string;
+  is_global: boolean;
+  workspace_id: string | null;
+}
+
+export type GemUpdatePayload = Partial<GemCreatePayload>;
 
 export interface ChatRequest {
   workspace_id: string;
@@ -82,6 +95,16 @@ export interface ChatRequest {
   selected_model: string;
   selected_gem_id: string | null;
   think: boolean;
+}
+
+export interface ChatResponse {
+  conversation_id: string;
+  assistant_message_id: string;
+  assistant_message: string;
+  model: string;
+  gem_id: string | null;
+  think: boolean;
+  provider: string;
 }
 
 export interface AuditLog {

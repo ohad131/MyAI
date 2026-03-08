@@ -19,6 +19,12 @@ import {
   ChevronDown,
   LayoutGrid,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import LiquidButton from "@/components/LiquidButton";
 import {
@@ -52,6 +58,7 @@ export default function ChatPage() {
     activeWorkspace,
     activeWorkspaceId,
     workspacesLoading,
+    workspaceBootstrapReady,
     models,
     defaultModel,
   } = useWorkspaceContext();
@@ -76,6 +83,9 @@ export default function ChatPage() {
   const [gemDropOpen, setGemDropOpen] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const pendingConvPatchRef = useRef<
+    Record<string, Partial<Pick<Conversation, "model" | "gem_id" | "think_enabled">>>
+  >({});
 
   const activeConv =
     conversations.find((c) => c.id === activeConvId) ?? null;
@@ -187,19 +197,49 @@ export default function ChatPage() {
     }
   };
 
-  const handleUpdateConvSetting = async (
-    field: string,
-    value: string | boolean | null,
+  const getEffectiveConversation = (
+    convId: string | null,
+  ): Conversation | null => {
+    if (!convId) return null;
+    const base = conversations.find((c) => c.id === convId);
+    if (!base) return null;
+    const pending = pendingConvPatchRef.current[convId];
+    return pending ? { ...base, ...pending } : base;
+  };
+
+  const handleUpdateConvSetting = async <
+    K extends keyof Pick<Conversation, "model" | "gem_id" | "think_enabled">,
+  >(
+    field: K,
+    value: Conversation[K],
   ) => {
     if (!activeConvId) return;
+    const targetConvId = activeConvId;
+    const previous = conversations.find((c) => c.id === targetConvId);
+    if (!previous) return;
+
+    // Keep UI/send payload in sync immediately, even before PATCH resolves.
+    pendingConvPatchRef.current[targetConvId] = {
+      ...(pendingConvPatchRef.current[targetConvId] || {}),
+      [field]: value,
+    };
+    setConversations((prev) =>
+      prev.map((c) => (c.id === targetConvId ? { ...c, [field]: value } : c)),
+    );
+
     try {
-      const updated = await updateConversation(activeConvId, {
+      const updated = await updateConversation(targetConvId, {
         [field]: value,
       });
+      delete pendingConvPatchRef.current[targetConvId];
       setConversations((prev) =>
-        prev.map((c) => (c.id === activeConvId ? updated : c)),
+        prev.map((c) => (c.id === targetConvId ? updated : c)),
       );
     } catch (err) {
+      delete pendingConvPatchRef.current[targetConvId];
+      setConversations((prev) =>
+        prev.map((c) => (c.id === targetConvId ? previous : c)),
+      );
       toast.error(getErrorMessage(err));
     }
   };
@@ -208,9 +248,10 @@ export default function ChatPage() {
     if (!input.trim() || !activeWorkspaceId || sending) return;
 
     let convId = activeConvId;
-    let convModel = activeConv?.model;
-    let convGemId = activeConv?.gem_id ?? null;
-    let convThink = activeConv?.think_enabled ?? false;
+    const effectiveActiveConv = getEffectiveConversation(activeConvId);
+    let convModel = effectiveActiveConv?.model;
+    let convGemId = effectiveActiveConv?.gem_id ?? null;
+    let convThink = effectiveActiveConv?.think_enabled ?? false;
 
     if (!convId) {
       try {
@@ -294,6 +335,24 @@ export default function ChatPage() {
   const filteredConvs = conversations.filter((c) =>
     c.title.toLowerCase().includes(convSearch.toLowerCase()),
   );
+
+  // Keep initial server/client render deterministic until workspace bootstrap runs.
+  if (!workspaceBootstrapReady) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2
+            size={24}
+            className="animate-spin"
+            style={{ color: "var(--metal)" }}
+          />
+          <span className="text-sm" style={{ color: "var(--muted-foreground)" }}>
+            Loading workspace...
+          </span>
+        </div>
+      </div>
+    );
+  }
 
   // Loading — workspaces still resolving a persisted ID
   if (workspacesLoading && !activeWorkspace && activeWorkspaceId) {
@@ -525,151 +584,137 @@ export default function ChatPage() {
           {activeConv && (
             <>
               {/* Model selector */}
-              <div className="relative">
-                <button
-                  onClick={() => {
-                    setModelDropOpen(!modelDropOpen);
-                    setGemDropOpen(false);
-                  }}
-                  className="lg-btn flex items-center gap-1 px-2 py-1 rounded-xl text-xs"
-                  style={{ color: "var(--metal)" }}
-                >
-                  <span className="truncate max-w-[100px]">
-                    {activeConv.model || defaultModel}
-                  </span>
-                  <ChevronDown size={9} />
-                </button>
-                {modelDropOpen && (
-                  <>
-                    <div
-                      className="fixed inset-0 z-40"
-                      onClick={() => setModelDropOpen(false)}
-                    />
-                    <div
-                      className="absolute top-full mt-1 right-0 w-48 lg-panel rounded-xl py-1.5 z-50"
-                      style={{ animation: "fade-up 0.15s ease" }}
-                    >
-                      {models.map((m) => (
-                        <button
-                          key={m.id}
-                          onClick={() => {
-                            handleUpdateConvSetting("model", m.id);
-                            setModelDropOpen(false);
-                          }}
-                          className="w-full text-left px-3 py-1.5 text-xs transition-colors rounded-lg"
-                          style={{
-                            color:
-                              m.id === activeConv.model
-                                ? "var(--metal)"
-                                : "var(--foreground)",
-                            background:
-                              m.id === activeConv.model
-                                ? "var(--metal-dim)"
-                                : "transparent",
-                            margin: "0 4px",
-                            width: "calc(100% - 8px)",
-                          }}
-                        >
-                          {m.id}{" "}
-                          <span style={{ color: "var(--muted-foreground)" }}>
-                            ({m.provider})
-                          </span>
-                        </button>
-                      ))}
-                      {models.length === 0 && (
-                        <span
-                          className="block px-3 py-1.5 text-xs"
-                          style={{ color: "var(--muted-foreground)" }}
-                        >
-                          Loading models...
-                        </span>
-                      )}
-                    </div>
-                  </>
-                )}
-              </div>
-
-              {/* Gem selector */}
-              {gems.length > 0 && (
-                <div className="relative">
+              <DropdownMenu
+                open={modelDropOpen}
+                onOpenChange={(open) => {
+                  setModelDropOpen(open);
+                  if (open) setGemDropOpen(false);
+                }}
+              >
+                <DropdownMenuTrigger asChild>
                   <button
-                    onClick={() => {
-                      setGemDropOpen(!gemDropOpen);
-                      setModelDropOpen(false);
-                    }}
                     className="lg-btn flex items-center gap-1 px-2 py-1 rounded-xl text-xs"
-                    style={{
-                      color: activeConv.gem_id
-                        ? "var(--metal)"
-                        : "var(--muted-foreground)",
-                    }}
+                    style={{ color: "var(--metal)" }}
                   >
-                    <Sparkles size={10} />
-                    <span className="truncate max-w-[80px]">
-                      {activeConv.gem_id
-                        ? (gems.find((g) => g.id === activeConv.gem_id)
-                            ?.name || "Gem")
-                        : "No gem"}
+                    <span className="truncate max-w-[100px]">
+                      {activeConv.model || defaultModel}
                     </span>
                     <ChevronDown size={9} />
                   </button>
-                  {gemDropOpen && (
-                    <>
-                      <div
-                        className="fixed inset-0 z-40"
-                        onClick={() => setGemDropOpen(false)}
-                      />
-                      <div
-                        className="absolute top-full mt-1 right-0 w-48 lg-panel rounded-xl py-1.5 z-50"
-                        style={{ animation: "fade-up 0.15s ease" }}
-                      >
-                        <button
-                          onClick={() => {
-                            handleUpdateConvSetting("gem_id", null);
-                            setGemDropOpen(false);
-                          }}
-                          className="w-full text-left px-3 py-1.5 text-xs transition-colors rounded-lg"
-                          style={{
-                            color: !activeConv.gem_id
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="end"
+                  className="w-48 lg-panel rounded-xl py-1.5"
+                >
+                  {models.map((m) => (
+                    <DropdownMenuItem
+                      key={m.id}
+                      onClick={() => {
+                        handleUpdateConvSetting("model", m.id);
+                        setModelDropOpen(false);
+                      }}
+                      className="px-3 py-1.5 text-xs rounded-lg mx-1 w-[calc(100%-8px)] cursor-pointer focus:bg-[var(--metal-dim)]"
+                      style={{
+                        color:
+                          m.id === activeConv.model
+                            ? "var(--metal)"
+                            : "var(--foreground)",
+                        background:
+                          m.id === activeConv.model
+                            ? "var(--metal-dim)"
+                            : "transparent",
+                      }}
+                    >
+                      {m.id}{" "}
+                      <span style={{ color: "var(--muted-foreground)" }}>
+                        ({m.provider})
+                      </span>
+                    </DropdownMenuItem>
+                  ))}
+                  {models.length === 0 && (
+                    <span
+                      className="block px-3 py-1.5 text-xs"
+                      style={{ color: "var(--muted-foreground)" }}
+                    >
+                      Loading models...
+                    </span>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              {/* Gem selector */}
+              {gems.length > 0 && (
+                <DropdownMenu
+                  open={gemDropOpen}
+                  onOpenChange={(open) => {
+                    setGemDropOpen(open);
+                    if (open) setModelDropOpen(false);
+                  }}
+                >
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      className="lg-btn flex items-center gap-1 px-2 py-1 rounded-xl text-xs"
+                      style={{
+                        color: activeConv.gem_id
+                          ? "var(--metal)"
+                          : "var(--muted-foreground)",
+                      }}
+                    >
+                      <Sparkles size={10} />
+                      <span className="truncate max-w-[80px]">
+                        {activeConv.gem_id
+                          ? (gems.find((g) => g.id === activeConv.gem_id)
+                              ?.name || "Gem")
+                          : "No gem"}
+                      </span>
+                      <ChevronDown size={9} />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="end"
+                    className="w-48 lg-panel rounded-xl py-1.5 border-[var(--glass-border)] bg-[var(--glass-bg)] shadow-[var(--glass-shadow)]"
+                  >
+                    <DropdownMenuItem
+                      onClick={() => {
+                        handleUpdateConvSetting("gem_id", null);
+                        setGemDropOpen(false);
+                      }}
+                      className="px-3 py-1.5 text-xs rounded-lg mx-1 w-[calc(100%-8px)] cursor-pointer focus:bg-[var(--metal-dim)]"
+                      style={{
+                        color: !activeConv.gem_id
+                          ? "var(--metal)"
+                          : "var(--foreground)",
+                        background: !activeConv.gem_id
+                          ? "var(--metal-dim)"
+                          : "transparent",
+                      }}
+                    >
+                      None
+                    </DropdownMenuItem>
+                    {gems.map((g) => (
+                      <DropdownMenuItem
+                        key={g.id}
+                        onClick={() => {
+                          handleUpdateConvSetting("gem_id", g.id);
+                          setGemDropOpen(false);
+                        }}
+                        className="px-3 py-1.5 text-xs rounded-lg mx-1 w-[calc(100%-8px)] cursor-pointer focus:bg-[var(--metal-dim)]"
+                        style={{
+                          color:
+                            g.id === activeConv.gem_id
                               ? "var(--metal)"
                               : "var(--foreground)",
-                            background: !activeConv.gem_id
+                          background:
+                            g.id === activeConv.gem_id
                               ? "var(--metal-dim)"
                               : "transparent",
-                            margin: "0 4px",
-                            width: "calc(100% - 8px)",
-                          }}
-                        >
-                          None
-                        </button>
-                        {gems.map((g) => (
-                          <button
-                            key={g.id}
-                            onClick={() => {
-                              handleUpdateConvSetting("gem_id", g.id);
-                              setGemDropOpen(false);
-                            }}
-                            className="w-full text-left px-3 py-1.5 text-xs transition-colors rounded-lg"
-                            style={{
-                              color:
-                                g.id === activeConv.gem_id
-                                  ? "var(--metal)"
-                                  : "var(--foreground)",
-                              background:
-                                g.id === activeConv.gem_id
-                                  ? "var(--metal-dim)"
-                                  : "transparent",
-                              margin: "0 4px",
-                              width: "calc(100% - 8px)",
-                            }}
-                          >
-                            {g.name}
-                          </button>
-                        ))}
-                      </div>
-                    </>
-                  )}
-                </div>
+                        }}
+                      >
+                        {g.name}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               )}
 
               {/* Think toggle */}

@@ -6,7 +6,7 @@ import type { Route } from "next";
 import { useTheme } from "@/contexts/ThemeContext";
 import {
   Search, LayoutGrid, MessageSquare, Code2, Image, Bot, Brain,
-  Settings, Palette, Plus, Moon, Sun, Command, ArrowRight
+  Settings, Palette, Plus, Moon, Sun, Command, ArrowRight, Sparkles
 } from "lucide-react";
 
 const COMMANDS = [
@@ -14,6 +14,7 @@ const COMMANDS = [
   { id: "chat",    label: "Go to Chat",           icon: MessageSquare, path: "/chat",         shortcut: "G C" },
   { id: "code",    label: "Go to Code",           icon: Code2,         path: "/code",         shortcut: "G K" },
   { id: "images",  label: "Go to Images",         icon: Image,         path: "/images",       shortcut: "G I" },
+  { id: "gems",    label: "Go to Gems",           icon: Sparkles,      path: "/gems",         shortcut: "G G" },
   { id: "agents",  label: "Go to Agents",         icon: Bot,           path: "/agents",       shortcut: "G A" },
   { id: "memory",  label: "Go to Memory",         icon: Brain,         path: "/memory",       shortcut: "G M" },
   { id: "settings",label: "Go to Settings",       icon: Settings,      path: "/settings",     shortcut: "G S" },
