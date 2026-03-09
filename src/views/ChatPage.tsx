@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useWorkspaceContext } from "@/contexts/WorkspaceContext";
 import { useRouter } from "next/navigation";
 import {
@@ -38,6 +38,11 @@ import { sendChatMessage } from "@/api/chat";
 import { fetchGems } from "@/api/gems";
 import { getErrorMessage } from "@/api/client";
 import type { Conversation, Message, Gem } from "@/types/api";
+import {
+  getPersistedActiveConversationId,
+  resolveRestoredConversationId,
+  setPersistedActiveConversationId,
+} from "@/views/chatConversationPersistence";
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -58,7 +63,10 @@ export default function ChatPage() {
     activeWorkspace,
     activeWorkspaceId,
     workspacesLoading,
+    workspacesStatus,
+    workspacesError,
     workspaceBootstrapReady,
+    refreshWorkspaces,
     models,
     defaultModel,
   } = useWorkspaceContext();
@@ -90,6 +98,16 @@ export default function ChatPage() {
   const activeConv =
     conversations.find((c) => c.id === activeConvId) ?? null;
 
+  const setActiveConversation = useCallback(
+    (conversationId: string | null, workspaceId: string | null = activeWorkspaceId) => {
+      setActiveConvId(conversationId);
+      if (workspaceId) {
+        setPersistedActiveConversationId(workspaceId, conversationId);
+      }
+    },
+    [activeWorkspaceId],
+  );
+
   // Load conversations when workspace changes — also reset conversation state
   useEffect(() => {
     setActiveConvId(null);
@@ -106,7 +124,15 @@ export default function ChatPage() {
     setConvsLoading(true);
     fetchConversations(activeWorkspaceId)
       .then((data) => {
-        if (!cancelled) setConversations(data);
+        if (cancelled) return;
+        setConversations(data);
+
+        const persistedId = getPersistedActiveConversationId(activeWorkspaceId);
+        const restoredConversationId = resolveRestoredConversationId(
+          data,
+          persistedId,
+        );
+        setActiveConversation(restoredConversationId, activeWorkspaceId);
       })
       .catch((err) => {
         if (!cancelled) toast.error(getErrorMessage(err));
@@ -117,7 +143,7 @@ export default function ChatPage() {
     return () => {
       cancelled = true;
     };
-  }, [activeWorkspaceId]);
+  }, [activeWorkspaceId, setActiveConversation]);
 
   // Load gems when workspace changes
   useEffect(() => {
@@ -180,7 +206,7 @@ export default function ChatPage() {
         think_enabled: false,
       });
       setConversations((prev) => [conv, ...prev]);
-      setActiveConvId(conv.id);
+      setActiveConversation(conv.id);
     } catch (err) {
       toast.error(getErrorMessage(err));
     }
@@ -190,7 +216,7 @@ export default function ChatPage() {
     try {
       await deleteConversation(convId);
       setConversations((prev) => prev.filter((c) => c.id !== convId));
-      if (activeConvId === convId) setActiveConvId(null);
+      if (activeConvId === convId) setActiveConversation(null);
       toast.success("Conversation deleted");
     } catch (err) {
       toast.error(getErrorMessage(err));
@@ -263,7 +289,7 @@ export default function ChatPage() {
         });
         setConversations((prev) => [conv, ...prev]);
         skipMsgFetchRef.current = true;
-        setActiveConvId(conv.id);
+        setActiveConversation(conv.id);
         convId = conv.id;
         convModel = conv.model;
         convGemId = conv.gem_id;
@@ -375,6 +401,28 @@ export default function ChatPage() {
     );
   }
 
+  if (workspacesStatus === "error" && !activeWorkspace && activeWorkspaceId) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3 text-center max-w-sm">
+          <h3
+            className="text-base font-medium"
+            style={{ color: "var(--foreground)" }}
+          >
+            Workspace service unavailable
+          </h3>
+          <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>
+            {workspacesError ??
+              "Cannot load workspaces right now. Try again when the backend is back."}
+          </p>
+          <LiquidButton size="sm" onClick={refreshWorkspaces}>
+            Retry
+          </LiquidButton>
+        </div>
+      </div>
+    );
+  }
+
   // No workspace selected
   if (!activeWorkspaceId) {
     return (
@@ -479,7 +527,7 @@ export default function ChatPage() {
             {filteredConvs.map((conv) => (
               <div key={conv.id} className="group relative">
                 <button
-                  onClick={() => setActiveConvId(conv.id)}
+                  onClick={() => setActiveConversation(conv.id)}
                   className="w-full text-left p-2.5 rounded-xl transition-all"
                   style={{
                     background:

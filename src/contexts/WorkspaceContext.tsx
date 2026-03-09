@@ -11,12 +11,17 @@ import { fetchWorkspaces as apiFetchWorkspaces } from "@/api/workspaces";
 import { fetchModels as apiFetchModels } from "@/api/models";
 import type { Workspace, ModelEntry } from "@/types/api";
 import { getErrorMessage } from "@/api/client";
+import {
+  resolveActiveWorkspaceId,
+  type WorkspaceLoadStatus,
+} from "@/contexts/workspaceState";
 
 const ACTIVE_WS_KEY = "myai-active-workspace";
 
 interface WorkspaceContextType {
   workspaces: Workspace[];
   workspacesLoading: boolean;
+  workspacesStatus: WorkspaceLoadStatus;
   workspacesError: string | null;
   workspaceBootstrapReady: boolean;
   activeWorkspaceId: string | null;
@@ -37,8 +42,9 @@ const WorkspaceContext = createContext<WorkspaceContextType | undefined>(
 export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [workspacesLoading, setWorkspacesLoading] = useState(true);
+  const [workspacesStatus, setWorkspacesStatus] =
+    useState<WorkspaceLoadStatus>("loading");
   const [workspacesError, setWorkspacesError] = useState<string | null>(null);
-  const [workspacesReady, setWorkspacesReady] = useState(false);
   const [workspaceBootstrapReady, setWorkspaceBootstrapReady] = useState(false);
   const [activeWorkspaceId, setActiveWorkspaceIdRaw] = useState<string | null>(
     null,
@@ -60,15 +66,17 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
   const refreshWorkspaces = useCallback(async () => {
     setWorkspacesLoading(true);
+    setWorkspacesStatus("loading");
     setWorkspacesError(null);
     try {
       const data = await apiFetchWorkspaces();
       setWorkspaces(data);
+      setWorkspacesStatus("success");
     } catch (err) {
       setWorkspacesError(getErrorMessage(err));
+      setWorkspacesStatus("error");
     } finally {
       setWorkspacesLoading(false);
-      setWorkspacesReady(true);
     }
   }, []);
 
@@ -107,16 +115,23 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     workspaces.find((w) => w.id === activeWorkspaceId) ?? null;
 
   useEffect(() => {
-    if (workspacesReady && activeWorkspaceId && !activeWorkspace) {
-      setActiveWorkspaceId(null);
+    const resolvedActiveWorkspaceId = resolveActiveWorkspaceId({
+      activeWorkspaceId,
+      workspaces,
+      loadStatus: workspacesStatus,
+    });
+
+    if (resolvedActiveWorkspaceId !== activeWorkspaceId) {
+      setActiveWorkspaceId(resolvedActiveWorkspaceId);
     }
-  }, [workspacesReady, activeWorkspaceId, activeWorkspace, setActiveWorkspaceId]);
+  }, [activeWorkspaceId, workspaces, workspacesStatus, setActiveWorkspaceId]);
 
   return (
     <WorkspaceContext.Provider
       value={{
         workspaces,
         workspacesLoading,
+        workspacesStatus,
         workspacesError,
         workspaceBootstrapReady,
         activeWorkspaceId,
