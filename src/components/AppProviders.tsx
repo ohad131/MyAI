@@ -14,7 +14,7 @@ export default function AppProviders({
 }) {
   return (
     <ErrorBoundary>
-      <ThemeProvider defaultTheme="dark" switchable>
+      <ThemeProvider defaultTheme="system" switchable>
         <WorkspaceProvider>
           <TooltipProvider>
             <Toaster position="bottom-right" richColors />

@@ -3,7 +3,30 @@ import AppProviders from "@/components/AppProviders";
 import { siteConfig } from "@/lib/site";
 import "@/index.css";
 
-const themeInitScript = `(function(){try{var t=localStorage.getItem("myai-theme")||"dark";var d=document.documentElement;d.classList.remove("light","dark");d.classList.add(t);}catch(e){document.documentElement.classList.add("dark");}})();`;
+const themeInitScript = `
+(() => {
+  const root = document.documentElement;
+  let mode = "system";
+
+  try {
+    const stored = localStorage.getItem("myai-theme");
+    if (stored === "light" || stored === "dark" || stored === "system") {
+      mode = stored;
+    }
+  } catch {}
+
+  const theme =
+    mode === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : mode === "system"
+        ? "light"
+        : mode;
+
+  root.classList.remove("light", "dark");
+  root.classList.add(theme);
+  root.dataset.themeMode = mode;
+})();
+`;
 
 export const metadata: Metadata = {
   metadataBase: siteConfig.url ?? undefined,
@@ -38,7 +61,7 @@ export default function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
-      <body suppressHydrationWarning>
+      <body>
         <AppProviders>{children}</AppProviders>
       </body>
     </html>

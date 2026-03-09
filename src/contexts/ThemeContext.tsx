@@ -3,11 +3,13 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 
 type Theme = "light" | "dark";
+type ThemeMode = Theme | "system";
 
 interface ThemeContextType {
   theme: Theme;
+  themeMode: ThemeMode;
   toggleTheme: () => void;
-  setTheme: (t: Theme) => void;
+  setTheme: (t: ThemeMode) => void;
   switchable: boolean;
 }
 
@@ -15,51 +17,91 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 interface ThemeProviderProps {
   children: React.ReactNode;
-  defaultTheme?: Theme;
+  defaultTheme?: ThemeMode;
   switchable?: boolean;
+}
+
+function resolveTheme(mode: ThemeMode): Theme {
+  if (mode === "system") {
+    if (
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches
+    ) {
+      return "dark";
+    }
+    return "light";
+  }
+  return mode;
+}
+
+function readInitialThemeMode(defaultTheme: ThemeMode): ThemeMode {
+  if (typeof window === "undefined") return defaultTheme;
+  try {
+    const stored = localStorage.getItem("myai-theme");
+    return stored === "light" || stored === "dark" || stored === "system"
+      ? stored
+      : defaultTheme;
+  } catch {
+    return defaultTheme;
+  }
 }
 
 export function ThemeProvider({
   children,
-  defaultTheme = "dark",
+  defaultTheme = "system",
   switchable = true,
 }: ThemeProviderProps) {
-  const [theme, setThemeState] = useState<Theme>(defaultTheme);
-  const [hydrated, setHydrated] = useState(false);
+  const [themeMode, setThemeMode] = useState<ThemeMode>(defaultTheme);
+  const [theme, setResolvedTheme] = useState<Theme>(
+    defaultTheme === "dark" ? "dark" : "light",
+  );
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem("myai-theme");
-      if (stored === "light" || stored === "dark") {
-        setThemeState(stored);
-      } else {
-        const domTheme = document.documentElement.classList.contains("light")
-          ? "light"
-          : document.documentElement.classList.contains("dark")
-            ? "dark"
-            : defaultTheme;
-        setThemeState(domTheme);
-      }
-    } catch {
-      setThemeState(defaultTheme);
-    } finally {
-      setHydrated(true);
-    }
+    setThemeMode(readInitialThemeMode(defaultTheme));
   }, [defaultTheme]);
 
   useEffect(() => {
-    if (!hydrated) return;
+    if (themeMode !== "system") {
+      setResolvedTheme(themeMode);
+      return;
+    }
+
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    const applySystemTheme = () =>
+      setResolvedTheme(mediaQuery.matches ? "dark" : "light");
+
+    applySystemTheme();
+    mediaQuery.addEventListener("change", applySystemTheme);
+    return () => {
+      mediaQuery.removeEventListener("change", applySystemTheme);
+    };
+  }, [themeMode]);
+
+  useEffect(() => {
     const root = document.documentElement;
     root.classList.remove("light", "dark");
     root.classList.add(theme);
-    try { localStorage.setItem("myai-theme", theme); } catch {}
-  }, [theme, hydrated]);
+    root.dataset.themeMode = themeMode;
+    try {
+      localStorage.setItem("myai-theme", themeMode);
+    } catch {
+      /* localStorage unavailable */
+    }
+  }, [theme, themeMode]);
 
-  const toggleTheme = () => setThemeState(prev => prev === "light" ? "dark" : "light");
-  const setTheme = (t: Theme) => setThemeState(t);
+  const toggleTheme = () => {
+    setThemeMode((prev) => {
+      const resolvedCurrentTheme = prev === "system" ? theme : prev;
+      return resolvedCurrentTheme === "dark" ? "light" : "dark";
+    });
+  };
+
+  const setTheme = (mode: ThemeMode) => setThemeMode(mode);
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme, setTheme, switchable }}>
+    <ThemeContext.Provider
+      value={{ theme, themeMode, toggleTheme, setTheme, switchable }}
+    >
       {children}
     </ThemeContext.Provider>
   );
