@@ -13,6 +13,10 @@ class Settings(BaseSettings):
     default_model: str = "qwen3.5:9b"
     default_language: str = "he"
 
+    memory_embedding_enabled: bool = True
+    memory_embedding_provider: str = "ollama"
+    memory_embedding_model: str = "nomic-embed-text"
+
     request_timeout_seconds: float = 120.0
 
     model_config = SettingsConfigDict(

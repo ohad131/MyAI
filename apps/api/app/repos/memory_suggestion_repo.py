@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.models.memory_suggestion import MemorySuggestion
 from app.schemas.memory_enums import MemoryScope, MemorySuggestionStatus, MemoryType
 from app.schemas.memory_suggestion import MemorySuggestionCreate
+from app.utils.json_codec import dump_json_text
 
 
 class MemorySuggestionRepo:
@@ -32,10 +33,14 @@ class MemorySuggestionRepo:
     def create(self, db: Session, payload: MemorySuggestionCreate) -> MemorySuggestion:
         suggestion = MemorySuggestion(
             source_conversation_id=payload.source_conversation_id,
+            source_message_id=payload.source_message_id,
             scope=payload.scope.value,
             scope_id=payload.scope_id,
             type=payload.type.value,
             proposed_content=payload.proposed_content,
+            confidence=payload.confidence,
+            reason=payload.reason,
+            candidate_signals_json=dump_json_text(payload.candidate_signals_json),
             status=MemorySuggestionStatus.PENDING.value,
         )
         db.add(suggestion)

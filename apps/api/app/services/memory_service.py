@@ -1,3 +1,6 @@
+from datetime import datetime
+import logging
+
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
@@ -8,6 +11,9 @@ from app.repos.workspace_repo import WorkspaceRepo
 from app.schemas.memory import MemoryCreate, MemoryUpdate, validate_scope_scope_id
 from app.schemas.memory_enums import MemoryScope, MemoryType
 from app.services.audit_service import AuditService
+from app.services.memory_embedding_service import MemoryEmbeddingService
+
+logger = logging.getLogger(__name__)
 
 
 class MemoryService:
@@ -17,11 +23,13 @@ class MemoryService:
         workspace_repo: WorkspaceRepo | None = None,
         gem_repo: GemRepo | None = None,
         audit: AuditService | None = None,
+        memory_embedding_service: MemoryEmbeddingService | None = None,
     ) -> None:
         self.repo = repo or MemoryRepo()
         self.workspace_repo = workspace_repo or WorkspaceRepo()
         self.gem_repo = gem_repo or GemRepo()
         self.audit = audit or AuditService()
+        self.memory_embedding_service = memory_embedding_service or MemoryEmbeddingService()
 
     def list_memories(
         self,
@@ -61,6 +69,7 @@ class MemoryService:
                 "type": memory.type,
             },
         )
+        self.index_memory_embedding_non_fatal(db, memory)
         return memory
 
     def update_memory(self, db: Session, memory_id: str, payload: MemoryUpdate):
@@ -81,6 +90,8 @@ class MemoryService:
             workspace_id=self.workspace_id_for_audit(MemoryScope(memory.scope), memory.scope_id),
             payload={"memory_id": memory.id, "changes": self._serialize_changes(incoming)},
         )
+        if "content" in incoming:
+            self.index_memory_embedding_non_fatal(db, memory)
         return memory
 
     def delete_memory(self, db: Session, memory_id: str):
@@ -116,6 +127,13 @@ class MemoryService:
         for key, value in changes.items():
             if isinstance(value, (MemoryScope, MemoryType)):
                 serialized[key] = value.value
+            elif isinstance(value, datetime):
+                serialized[key] = value.isoformat()
             else:
                 serialized[key] = value
         return serialized
+
+    def index_memory_embedding_non_fatal(self, db: Session, memory: Memory) -> None:
+        result = self.memory_embedding_service.index_memory_non_fatal(db, memory)
+        if result == "failed":
+            logger.warning("memory embedding indexing failed memory_id=%s", memory.id)

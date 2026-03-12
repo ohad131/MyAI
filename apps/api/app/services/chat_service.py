@@ -11,6 +11,9 @@ from app.schemas.chat import ChatRequest, ChatResponse
 from app.services.audit_service import AuditService
 from app.services.conversation_service import ConversationService
 from app.services.gem_service import GemService
+from app.services.memory_injection_service import MemoryInjectionService
+from app.services.memory_usage_log_service import MemoryUsageLogService
+from app.services.memory_write_service import MemoryWriteService
 from app.services.workspace_service import WorkspaceService
 from app.services.prompt_builder import build_prompt_messages
 from app.utils.json_codec import parse_json_text
@@ -27,6 +30,9 @@ class ChatService:
         gem_repo: GemRepo | None = None,
         workspace_service: WorkspaceService | None = None,
         gem_service: GemService | None = None,
+        memory_injection: MemoryInjectionService | None = None,
+        memory_usage_log_service: MemoryUsageLogService | None = None,
+        memory_write_service: MemoryWriteService | None = None,
         audit: AuditService | None = None,
     ) -> None:
         self.registry = registry or ProviderRegistry()
@@ -35,6 +41,11 @@ class ChatService:
         self.gem_repo = gem_repo or GemRepo()
         self.workspace_service = workspace_service or WorkspaceService()
         self.gem_service = gem_service or GemService()
+        self.memory_injection = memory_injection or MemoryInjectionService()
+        self.memory_usage_log_service = memory_usage_log_service or MemoryUsageLogService(
+            memory_injection=self.memory_injection
+        )
+        self.memory_write_service = memory_write_service or MemoryWriteService()
         self.audit = audit or AuditService()
 
     async def execute_chat(self, db: Session, payload: ChatRequest) -> ChatResponse:
@@ -64,10 +75,28 @@ class ChatService:
                 raise HTTPException(status_code=400, detail="Gem allowed_models_json is invalid JSON")
 
         history = self.message_repo.list_by_conversation(db, conversation.id)
+        selection_result = None
+        memory_block = ""
+        try:
+            selection_result = self.memory_injection.select_and_format_for_chat(
+                db=db,
+                workspace=workspace,
+                gem_id=gem_id,
+            )
+            memory_block = selection_result.memory_block
+        except Exception:
+            db.rollback()
+            logger.exception(
+                "memory injection failed conversation_id=%s workspace_id=%s",
+                conversation.id,
+                workspace.id,
+            )
+
         prompt_messages = build_prompt_messages(
             history=history,
             current_user_message=payload.user_message,
             gem=gem,
+            memory_block=memory_block,
         )
 
         user_message = self.message_repo.create(
@@ -104,6 +133,48 @@ class ChatService:
                 gem_id=gem_id,
                 think_enabled=think,
             )
+            selected_items = selection_result.items if selection_result else []
+            selected_memories = [item.memory for item in selected_items]
+
+            try:
+                self.memory_usage_log_service.log_injected_memories(
+                    db,
+                    conversation_id=conversation.id,
+                    message_id=assistant_message.id,
+                    workspace_id=conversation.workspace_id,
+                    gem_id=gem_id,
+                    items=selected_items,
+                )
+            except Exception:
+                db.rollback()
+                logger.exception(
+                    "memory usage logging failed conversation_id=%s",
+                    conversation.id,
+                )
+
+            try:
+                self.memory_injection.mark_memories_used(db, selected_memories)
+            except Exception:
+                db.rollback()
+                logger.exception(
+                    "memory usage update failed conversation_id=%s",
+                    conversation.id,
+                )
+            try:
+                self.memory_write_service.generate_suggestions_for_chat_turn(
+                    db,
+                    workspace=workspace,
+                    conversation_id=conversation.id,
+                    message_id=user_message.id,
+                    user_message=payload.user_message,
+                    gem_id=gem_id,
+                )
+            except Exception:
+                db.rollback()
+                logger.exception(
+                    "memory suggestion generation failed conversation_id=%s",
+                    conversation.id,
+                )
 
             self.audit.log_event(
                 db,

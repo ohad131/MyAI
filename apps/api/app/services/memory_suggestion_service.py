@@ -94,6 +94,7 @@ class MemorySuggestionService:
         db.commit()
         db.refresh(memory)
         db.refresh(suggestion)
+        self.memory_service.index_memory_embedding_non_fatal(db, memory)
 
         self.audit.log_event(
             db,
