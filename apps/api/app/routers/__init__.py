@@ -1,3 +1,13 @@
-from app.routers import chat, conversations, gems, health, logs, models, workspaces
+from app.routers import chat, conversations, gems, health, logs, memories, memory_suggestions, models, workspaces
 
-__all__ = ["health", "models", "workspaces", "gems", "conversations", "chat", "logs"]
+__all__ = [
+    "health",
+    "models",
+    "workspaces",
+    "gems",
+    "conversations",
+    "chat",
+    "logs",
+    "memories",
+    "memory_suggestions",
+]
