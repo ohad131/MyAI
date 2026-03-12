@@ -40,7 +40,44 @@ def test_create_valid_memory(client: TestClient) -> None:
     assert body["content"] == "User prefers short answers."
     assert body["pinned"] is True
     assert body["enabled"] is True
+    assert body["always_include"] is False
+    assert body["importance"] == 0.5
+    assert body["confidence"] == 1.0
+    assert body["source"] is None
+    assert body["tags_json"] is None
+    assert body["last_used_at"] is None
+    assert body["times_used"] == 0
     assert "id" in body
+
+
+def test_create_memory_with_explicit_new_fields(client: TestClient) -> None:
+    workspace_id = create_workspace(client)
+    response = client.post(
+        "/api/memories",
+        json={
+            "scope": "workspace",
+            "scope_id": workspace_id,
+            "type": "fact",
+            "content": "Remember this with metadata.",
+            "always_include": True,
+            "importance": 0.9,
+            "confidence": 0.8,
+            "source": "manual:test",
+            "tags_json": ["profile", "style"],
+            "last_used_at": "2026-01-02T03:04:05",
+            "times_used": 4,
+        },
+    )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["always_include"] is True
+    assert body["importance"] == 0.9
+    assert body["confidence"] == 0.8
+    assert body["source"] == "manual:test"
+    assert body["tags_json"] == ["profile", "style"]
+    assert body["last_used_at"].startswith("2026-01-02T03:04:05")
+    assert body["times_used"] == 4
 
 
 def test_memory_scope_scope_id_validation(client: TestClient) -> None:
@@ -86,6 +123,10 @@ def test_update_memory_fields(client: TestClient) -> None:
         json={
             "content": "Updated content",
             "type": "instruction",
+            "always_include": True,
+            "importance": 0.2,
+            "confidence": 0.7,
+            "tags_json": ["updated", "tag"],
             "pinned": True,
             "enabled": False,
         },
@@ -94,6 +135,10 @@ def test_update_memory_fields(client: TestClient) -> None:
     body = update_response.json()
     assert body["content"] == "Updated content"
     assert body["type"] == "instruction"
+    assert body["always_include"] is True
+    assert body["importance"] == 0.2
+    assert body["confidence"] == 0.7
+    assert body["tags_json"] == ["updated", "tag"]
     assert body["pinned"] is True
     assert body["enabled"] is False
 
@@ -131,6 +176,33 @@ def test_create_pending_memory_suggestion(client: TestClient) -> None:
     assert body["status"] == "pending"
     assert body["scope"] == "global"
     assert body["scope_id"] is None
+    assert body["source_message_id"] is None
+    assert body["confidence"] is None
+    assert body["reason"] is None
+    assert body["candidate_signals_json"] is None
+
+
+def test_create_pending_memory_suggestion_with_metadata(client: TestClient) -> None:
+    response = client.post(
+        "/api/memory/suggestions",
+        json={
+            "source_conversation_id": "conv-123",
+            "source_message_id": "msg-123",
+            "scope": "global",
+            "type": "fact",
+            "proposed_content": "User likes summaries.",
+            "confidence": 0.66,
+            "reason": "Explicit user statement",
+            "candidate_signals_json": {"signal": "explicit_statement", "weight": 0.9},
+        },
+    )
+    assert response.status_code == 201
+    body = response.json()
+    assert body["source_conversation_id"] == "conv-123"
+    assert body["source_message_id"] == "msg-123"
+    assert body["confidence"] == 0.66
+    assert body["reason"] == "Explicit user statement"
+    assert body["candidate_signals_json"] == {"signal": "explicit_statement", "weight": 0.9}
 
 
 def test_approve_suggestion_creates_memory(client: TestClient) -> None:

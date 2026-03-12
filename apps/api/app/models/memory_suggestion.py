@@ -1,4 +1,4 @@
-from sqlalchemy import CheckConstraint, Index, String, Text
+from sqlalchemy import CheckConstraint, Float, Index, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -20,8 +20,12 @@ class MemorySuggestion(UUIDTimestampMixin, Base):
     )
 
     source_conversation_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    source_message_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     scope: Mapped[str] = mapped_column(String(16), nullable=False)
     scope_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     type: Mapped[str] = mapped_column(String(16), nullable=False)
     proposed_content: Mapped[str] = mapped_column(Text, nullable=False)
+    confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    candidate_signals_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(String(16), nullable=False, default="pending")

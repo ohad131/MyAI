@@ -1,9 +1,12 @@
+from datetime import datetime
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.memory import Memory
 from app.schemas.memory import MemoryCreate
 from app.schemas.memory_enums import MemoryScope, MemoryType
+from app.utils.json_codec import dump_json_text
 
 
 class MemoryRepo:
@@ -40,6 +43,13 @@ class MemoryRepo:
             content=payload.content,
             pinned=payload.pinned,
             enabled=payload.enabled,
+            always_include=payload.always_include,
+            importance=payload.importance,
+            confidence=payload.confidence,
+            source=payload.source,
+            tags_json=dump_json_text(payload.tags_json),
+            last_used_at=payload.last_used_at,
+            times_used=payload.times_used,
         )
         db.add(memory)
         if commit:
@@ -56,6 +66,13 @@ class MemoryRepo:
         content: str,
         pinned: bool = False,
         enabled: bool = True,
+        always_include: bool = False,
+        importance: float = 0.5,
+        confidence: float = 1.0,
+        source: str | None = None,
+        tags_json: "list[str] | None" = None,
+        last_used_at: datetime | None = None,
+        times_used: int = 0,
         commit: bool = True,
     ) -> Memory:
         memory = Memory(
@@ -65,6 +82,13 @@ class MemoryRepo:
             content=content,
             pinned=pinned,
             enabled=enabled,
+            always_include=always_include,
+            importance=importance,
+            confidence=confidence,
+            source=source,
+            tags_json=dump_json_text(tags_json),
+            last_used_at=last_used_at,
+            times_used=times_used,
         )
         db.add(memory)
         if commit:
@@ -79,6 +103,9 @@ class MemoryRepo:
                 continue
             if field == "type" and isinstance(value, MemoryType):
                 setattr(memory, field, value.value)
+                continue
+            if field == "tags_json":
+                setattr(memory, field, dump_json_text(value))
                 continue
             setattr(memory, field, value)
         db.add(memory)

@@ -113,3 +113,60 @@ export interface AuditLog {
   details: Record<string, unknown>;
   created_at: string;
 }
+
+export type MemoryScope = "global" | "workspace" | "gem";
+export type MemoryType = "fact" | "preference" | "instruction";
+export type MemorySuggestionStatus = "pending" | "approved" | "rejected";
+
+export interface Memory {
+  id: string;
+  scope: MemoryScope;
+  scope_id: string | null;
+  type: MemoryType;
+  content: string;
+  pinned: boolean;
+  enabled: boolean;
+  always_include: boolean;
+  importance: number;
+  confidence: number;
+  source: string | null;
+  tags_json: string[] | null;
+  last_used_at: string | null;
+  times_used: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MemoryCreatePayload {
+  scope: MemoryScope;
+  scope_id?: string | null;
+  type: MemoryType;
+  content: string;
+  pinned?: boolean;
+  enabled?: boolean;
+  always_include?: boolean;
+  importance?: number;
+  confidence?: number;
+  source?: string | null;
+  tags_json?: string[] | null;
+  last_used_at?: string | null;
+  times_used?: number;
+}
+
+export type MemoryUpdatePayload = Partial<MemoryCreatePayload>;
+
+export interface MemorySuggestion {
+  id: string;
+  source_conversation_id: string | null;
+  source_message_id: string | null;
+  scope: MemoryScope;
+  scope_id: string | null;
+  type: MemoryType;
+  proposed_content: string;
+  confidence: number | null;
+  reason: string | null;
+  candidate_signals_json: Record<string, unknown> | Array<unknown> | null;
+  status: MemorySuggestionStatus;
+  created_at: string;
+  updated_at: string;
+}
